@@ -1,6 +1,18 @@
 // Acesso ao Supabase pela API REST (PostgREST e Storage), só do lado do servidor.
 const URL_ = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
-const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '';
+const KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '');
+
+// Descreve a chave sem revelá-la (tipo, papel e projeto), para diagnosticar chave errada.
+export function keyInfo() {
+  if (!KEY) return 'nenhuma chave';
+  if (KEY.startsWith('sb_secret_')) return 'chave secret (sb_secret_), ' + KEY.length + ' caracteres';
+  if (KEY.startsWith('sb_publishable_')) return 'chave PUBLISHABLE (pública) — precisa ser a secret';
+  if (KEY.startsWith('eyJ')) {
+    try { const p = JSON.parse(Buffer.from(KEY.split('.')[1], 'base64url').toString()); return `chave JWT, papel "${p.role}", projeto "${p.ref}"`; }
+    catch (e) { return 'chave JWT incompleta (copie de novo)'; }
+  }
+  return 'formato desconhecido (começa com "' + KEY.slice(0, 3) + '…", ' + KEY.length + ' caracteres)';
+}
 
 export const dbReady = () => Boolean(URL_ && KEY);
 
@@ -16,7 +28,7 @@ export async function rest(path, { method = 'GET', body, prefer } = {}) {
   });
   const txt = await r.text();
   const data = txt ? JSON.parse(txt) : null;
-  if (!r.ok) throw new Error((data && (data.message || data.error)) || `Supabase respondeu ${r.status}`);
+  if (!r.ok) { const m = (data && (data.message || data.error)) || `Supabase respondeu ${r.status}`; throw new Error(/api key/i.test(m) ? `${m} [${keyInfo()}; esperado projeto hxekdfkjeqqbkvrbkitk]` : m); }
   return data;
 }
 
