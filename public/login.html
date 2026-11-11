@@ -46,11 +46,12 @@ small{color:var(--muted);font-size:13.5px}
     <p>Cronograma, tarefas e entregas da equipe SKEMA.</p>
   </div>
   <form id="f">
-    <label for="nome">Seu nome<input id="nome" name="nome" autocomplete="name" required maxlength="40" placeholder="Ex.: Gustavo"></label>
+    <label for="nome">Seu nome<input id="nome" name="nome" list="equipe" autocomplete="name" required maxlength="40" placeholder="Ex.: Gustavo"></label>
+    <datalist id="equipe"><option value="Leticia Laguardia"><option value="Gustavo"><option value="Beatriz"><option value="Marina"><option value="Luan"><option value="Maurício"><option value="Catarina Assis"><option value="Antonio"><option value="Pérola"><option value="Rachel Patrocínio"></datalist>
     <label for="senha">Senha da equipe<input id="senha" name="senha" type="password" autocomplete="current-password" required></label>
     <div class="err" id="err" role="alert"></div>
     <button type="submit" id="btn">Entrar</button>
-    <small>Seu nome aparece ao lado de cada status e entrega que você alterar.</small>
+    <small>Entre <b>sempre com o mesmo nome</b>: é ele que guarda as suas tarefas e alterações. Maiúsculas e acentos não fazem diferença.</small>
   </form>
 </main>
 <script>
@@ -63,6 +64,7 @@ f.addEventListener('submit', async ev => {
     const r = await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({nome, senha}), credentials:'same-origin'});
     const j = await r.json().catch(() => ({}));
     if(!r.ok) throw new Error(j.error || 'Não deu para entrar.');
+    if(j.nome && j.nome !== nome) { try { localStorage.setItem('lg-nome', j.nome); } catch(e) {} }
     try { localStorage.setItem('lg-nome', nome); } catch(e) {}
     location.href = '/';
   } catch(e) { err.textContent = e.message; btn.disabled = false; btn.textContent = 'Entrar'; }

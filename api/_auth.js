@@ -17,8 +17,8 @@ export function passwordOk(given) {
   const b = Buffer.from(real);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
-export function makeCookie(name) {
-  const payload = Buffer.from(JSON.stringify({ n: name, t: Date.now() })).toString('base64url');
+export function makeCookie(name, login) {
+  const payload = Buffer.from(JSON.stringify({ n: name, l: login, t: Date.now() })).toString('base64url');
   const value = `${payload}.${sign(payload)}`;
   return `${COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`;
 }
@@ -34,9 +34,9 @@ export function getUser(req) {
   const expected = sign(payload);
   if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
   try {
-    const { n, t } = JSON.parse(Buffer.from(payload, 'base64url').toString());
+    const { n, l, t } = JSON.parse(Buffer.from(payload, 'base64url').toString());
     if (Date.now() - t > MAX_AGE * 1000) return null;
-    return { name: n };
+    return { name: n, login: l || n };
   } catch { return null; }
 }
 export function requireUser(req, res) {
