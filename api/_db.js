@@ -60,3 +60,8 @@ export async function deleteFile(publicUrl) {
 export function toLogin(nome) {
   return String(nome || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
 }
+
+// Garante que quem está logado existe na tabela de usuários (ex.: sessão aberta antes do banco existir).
+export async function ensureUser(user) {
+  await rest('usuarios?on_conflict=login', { method: 'POST', prefer: 'resolution=ignore-duplicates,return=minimal', body: { login: user.login, nome: user.name } });
+}

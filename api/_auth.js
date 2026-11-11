@@ -36,7 +36,7 @@ export function getUser(req) {
   try {
     const { n, l, t } = JSON.parse(Buffer.from(payload, 'base64url').toString());
     if (Date.now() - t > MAX_AGE * 1000) return null;
-    return { name: n, login: l || n };
+    return { name: n, login: l || String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ') };
   } catch { return null; }
 }
 export function requireUser(req, res) {

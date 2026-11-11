@@ -8,11 +8,15 @@ export default async function handler(req, res) {
     return res.status(200).json({ user: user.name, login: user.login, dbReady: false, tarefas: SEED_TAREFAS, entregas: SEED_ENTREGAS, usuarios: [] });
   }
   try {
-    const [status, entregas, usuarios] = await Promise.all([
+    let [status, entregas, usuarios] = await Promise.all([
       rest('tarefas_status?select=tarefa_id,status,atualizado_por,atualizado_em'),
       rest('entregas?select=id,dados,atualizada_por,atualizada_em'),
       rest('usuarios?select=login,nome,ultimo_acesso,acessos&order=ultimo_acesso.desc'),
     ]);
+    if (!usuarios.some(u => u.login === user.login)) {
+      const novo = await rest('rpc/registrar_acesso', { method: 'POST', body: { p_login: user.login, p_nome: user.name } });
+      usuarios = [...usuarios, ...(Array.isArray(novo) ? novo : novo ? [novo] : [])];
+    }
     const nomes = Object.fromEntries(usuarios.map(u => [u.login, u.nome]));
     const tarefas = Object.fromEntries(status.map(t => [t.tarefa_id, { status: t.status, por: nomes[t.atualizado_por] || '', em: t.atualizado_em }]));
     const ents = Object.fromEntries(entregas.map(e => [e.id, { ...e.dados, atualizadaPor: e.atualizada_por || e.dados.atualizadaPor, atualizadaEm: e.atualizada_em }]));
