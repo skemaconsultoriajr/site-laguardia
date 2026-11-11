@@ -1,6 +1,6 @@
 // Acesso ao Supabase pela API REST (PostgREST e Storage), só do lado do servidor.
 const URL_ = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
-const KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '');
+const KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '').replace(/^\s*Bearer\s+/i, '').replace(/[\s"']+/g, '');
 
 // Descreve a chave sem revelá-la (tipo, papel e projeto), para diagnosticar chave errada.
 export function keyInfo() {
@@ -19,9 +19,12 @@ export const dbReady = () => Boolean(URL_ && KEY);
 // Chave antiga (service_role, JWT "eyJ...") vai também no Authorization; a nova (sb_secret_...) só no apikey.
 const headers = extra => ({ apikey: KEY, ...(KEY.startsWith("eyJ") ? { Authorization: `Bearer ${KEY}` } : {}), ...extra });
 
+const hide = e => new Error(String((e && e.message) || e).split(KEY).join('***').replace(/sb_secret_[^\s"]*/g, 'sb_secret_***').replace(/eyJ[\w.-]{20,}/g, 'eyJ***'));
+async function safeFetch(url, opts) { try { return await fetch(url, opts); } catch (e) { throw hide(e); } }
+
 export async function rest(path, { method = 'GET', body, prefer } = {}) {
   if (!dbReady()) throw new Error('Banco de dados não configurado (SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY na Vercel).');
-  const r = await fetch(`${URL_}/rest/v1/${path}`, {
+  const r = await safeFetch(`${URL_}/rest/v1/${path}`, {
     method,
     headers: headers({ 'Content-Type': 'application/json', ...(prefer ? { Prefer: prefer } : {}) }),
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -35,7 +38,7 @@ export async function rest(path, { method = 'GET', body, prefer } = {}) {
 export async function uploadFile(path, buffer, contentType) {
   if (!dbReady()) throw new Error('Banco de dados não configurado.');
   const clean = path.split('/').map(encodeURIComponent).join('/');
-  const r = await fetch(`${URL_}/storage/v1/object/anexos/${clean}`, {
+  const r = await safeFetch(`${URL_}/storage/v1/object/anexos/${clean}`, {
     method: 'POST',
     headers: headers({ 'Content-Type': contentType || 'application/octet-stream', 'x-upsert': 'false' }),
     body: buffer,
@@ -48,7 +51,7 @@ export async function deleteFile(publicUrl) {
   const marker = '/storage/v1/object/public/anexos/';
   if (!publicUrl || !publicUrl.startsWith(URL_ + marker)) return;
   const path = publicUrl.slice((URL_ + marker).length);
-  await fetch(`${URL_}/storage/v1/object/anexos`, {
+  await safeFetch(`${URL_}/storage/v1/object/anexos`, {
     method: 'DELETE', headers: headers({ 'Content-Type': 'application/json' }), body: JSON.stringify({ prefixes: [decodeURIComponent(path)] }),
   });
 }
