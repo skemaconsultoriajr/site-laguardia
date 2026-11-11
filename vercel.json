@@ -1,9 +1,24 @@
 {
   "outputDirectory": "public",
   "rewrites": [
-    { "source": "/", "destination": "/api/page" }
+    {
+      "source": "/",
+      "destination": "/api/page"
+    },
+    {
+      "source": "/:slug",
+      "destination": "/api/adm?s=:slug"
+    }
   ],
   "headers": [
-    { "source": "/api/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] }
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    }
   ]
 }
