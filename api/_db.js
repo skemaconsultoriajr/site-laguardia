@@ -4,7 +4,8 @@ const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET
 
 export const dbReady = () => Boolean(URL_ && KEY);
 
-const headers = extra => ({ apikey: KEY, Authorization: `Bearer ${KEY}`, ...extra });
+// Chave antiga (service_role, JWT "eyJ...") vai também no Authorization; a nova (sb_secret_...) só no apikey.
+const headers = extra => ({ apikey: KEY, ...(KEY.startsWith("eyJ") ? { Authorization: `Bearer ${KEY}` } : {}), ...extra });
 
 export async function rest(path, { method = 'GET', body, prefer } = {}) {
   if (!dbReady()) throw new Error('Banco de dados não configurado (SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY na Vercel).');
